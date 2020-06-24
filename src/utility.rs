@@ -12,6 +12,7 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
+    /// Creates a new vector with the given coordinates.
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
@@ -218,25 +219,9 @@ impl From<Colour> for Rgb<u8> {
     }
 }
 
+/// An infinite ray, from a given point and with a given direction.
 #[derive(Debug, Clone)]
 pub struct Ray {
     pub origin: Vec3,
     pub direction: Vec3,
-}
-
-#[derive(Debug, Clone)]
-pub struct Shader {
-    pub hit_point: Vec3,
-    pub normal: Vec3,
-    pub colour: Colour,
-}
-
-impl Shader {
-    pub fn new() -> Self {
-        Shader {
-            hit_point: Vec3::new(0.0, 0.0, 0.0),
-            normal: Vec3::new(0.0, 0.0, 0.0),
-            colour: Colour::black(),
-        }
-    }
 }
