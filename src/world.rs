@@ -1,7 +1,7 @@
 //! The world to render.
 
 use crate::geometry::{self, Geometry, Intersection};
-use crate::sampler::{Generator, Jittered};
+use crate::sampler;
 use crate::tracer::Tracer;
 use crate::utility::{Colour, Ray, Vec3};
 
@@ -23,7 +23,7 @@ pub struct ViewPlane {
     /// Gamma correction to apply. (Currently unused.)
     pub gamma: f64,
     /// Sampler for antialiasing
-    pub sampler: Box<dyn Generator>,
+    pub sampler: Box<dyn sampler::Generator>,
 }
 
 /// The world itself.
@@ -63,7 +63,7 @@ impl World {
                 vres: 200,
                 s: 1.0,
                 gamma: 1.0,
-                sampler: Box::new(Jittered::new(25)),
+                sampler: Box::new(sampler::Default::new(25)),
             },
         }
     }

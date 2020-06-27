@@ -11,8 +11,10 @@
 //!
 //! In the meantime, this will suffice.
 
+#![allow(dead_code)]
+
 use crate::utility::{Vec2, Vec3};
-use rand::prelude::*;
+use rand::{distributions::Uniform, seq::SliceRandom, thread_rng, Rng};
 use std::{f64, fmt::Debug};
 
 /// Number of sets of samples to generate.
@@ -96,47 +98,275 @@ pub trait Generator: Debug {
     }
 }
 
-/// A set of jittered samples.
+/// The default sampler to use if you're not fussed otherwise.
+pub type Default = MultiJittered;
+
+/// Entirely random sampling.
 ///
-/// The unit square is first divided up into a grid of `num_samples` tiles.
-/// Each sample is then randomly placed somewhere on that grid.
+/// What it says on the box: picks `num_samples` samples entirely at random.
+/// Won't get you any sort of nice distribution.
 #[derive(Debug, Clone)]
-pub struct Jittered {
+pub struct Random {
     num_samples: usize,
-    n: usize,
 }
 
-impl Jittered {
-    /// Creates a new generator.
-    ///
-    /// The parameter `num_samples` must be a square number.
+impl Random {
     pub fn new(num_samples: usize) -> Self {
-        let n = (num_samples as f64).sqrt() as usize;
-        assert!(
-            n * n == num_samples,
-            "Jittered requires a square number of samples"
-        );
-
-        Self { num_samples, n }
+        Self { num_samples }
     }
 }
 
-impl Generator for Jittered {
+impl Generator for Random {
     fn num_samples(&self) -> usize {
         self.num_samples
     }
 
     fn new_square_set(&self) -> Vec<Vec2> {
         let mut rng = thread_rng();
-        let mut s = vec![];
+        (0..self.num_samples)
+            .map(|_| Vec2::new(rng.gen(), rng.gen()))
+            .collect()
+    }
+}
+
+/// Jittered sampling.
+///
+/// The unit square is first divided up into a grid of `num_samples` tiles.
+/// Each sample is then randomly placed somewhere on that grid.
+#[derive(Debug, Clone)]
+pub struct Jittered(Regular);
+
+impl Jittered {
+    /// Creates a new generator.
+    ///
+    /// The parameter `num_samples` must be a square number.
+    pub fn new(num_samples: usize) -> Self {
+        Self(Regular::new(num_samples))
+    }
+}
+
+impl Generator for Jittered {
+    fn num_samples(&self) -> usize {
+        self.0.num_samples
+    }
+
+    fn new_square_set(&self) -> Vec<Vec2> {
+        let mut rng = thread_rng();
+        self.0
+            .new_square_set()
+            .into_iter()
+            .map(|p| Vec2::new(p.x + rng.gen::<f64>(), p.y + rng.gen::<f64>()))
+            .collect()
+    }
+}
+
+/// Regular sampling.
+///
+/// Like [`Jittered`] sampling, splits up the unit square into a grid of tiles.
+/// Unlike `[Jittered`] sampling, we don't bother to jitter the samples.
+#[derive(Debug, Clone)]
+pub struct Regular {
+    num_samples: usize,
+    n: usize,
+}
+
+impl Regular {
+    /// Creates a new generator.
+    ///
+    /// The parameter `num_samples` must be a square number.
+    pub fn new(num_samples: usize) -> Self {
+        let n = (num_samples as f64).sqrt() as usize;
+        assert!(n * n == num_samples, "num_samples must be a perfect square");
+
+        Self { num_samples, n }
+    }
+}
+
+impl Generator for Regular {
+    fn num_samples(&self) -> usize {
+        self.num_samples
+    }
+
+    fn num_sets(&self) -> usize {
+        // only one kind of regular
+        1
+    }
+
+    fn new_square_set(&self) -> Vec<Vec2> {
+        let mut s = Vec::with_capacity(self.num_samples);
         for x in 0..self.n {
             for y in 0..self.n {
-                let x = x as f64 + rng.gen::<f64>();
-                let y = y as f64 + rng.gen::<f64>();
+                let x = x as f64;
+                let y = y as f64;
                 s.push(Vec2::new(x, y) / (self.n as f64));
             }
         }
         s
+    }
+}
+
+/// N-Rooks sampling.
+///
+/// Assuming `num_samples = n`, we place our `n` samples on an `n×n` grid
+/// such that there is exactly one sample in each row and column. This is
+/// reminiscent of rooks on a chessboard.
+///
+/// ...This has pretty bad 2D projection, so why am I even bothering ☺
+#[derive(Debug, Clone)]
+pub struct NRooks {
+    num_samples: usize,
+}
+
+impl NRooks {
+    pub fn new(num_samples: usize) -> Self {
+        Self { num_samples }
+    }
+}
+
+impl Generator for NRooks {
+    fn num_samples(&self) -> usize {
+        self.num_samples
+    }
+
+    fn new_square_set(&self) -> Vec<Vec2> {
+        let mut rng = thread_rng();
+        let mut xs: Vec<_> = (0..self.num_samples).collect();
+        let mut ys: Vec<_> = (0..self.num_samples).collect();
+
+        xs.shuffle(&mut rng);
+        ys.shuffle(&mut rng);
+
+        xs.into_iter()
+            .zip(ys.into_iter())
+            .map(|(x, y)| {
+                let x = (x as f64) + rng.gen::<f64>();
+                let y = (y as f64) + rng.gen::<f64>();
+                Vec2::new(x, y) / (self.num_samples as f64)
+            })
+            .collect()
+    }
+}
+
+/// MultiJittered sampling.
+///
+/// An combination of [`NRooks`] and [`Jittered`] sampling. We construct a two-level
+/// grid, and place a sample within the lower level grid such that the n-rooks condition
+/// is fulfilled. However, we also ensure that the placed samples are jittered in the
+/// upper level grid, to preserve a good 2D distribution.
+///
+/// Similar to the [`Jittered`] sampler we must have `num_samples` be a perfect square.
+#[derive(Debug, Clone)]
+pub struct MultiJittered {
+    num_samples: usize,
+    n: usize,
+}
+
+impl MultiJittered {
+    pub fn new(num_samples: usize) -> Self {
+        let n = (num_samples as f64).sqrt() as usize;
+        assert!(n * n == num_samples, "num_samples must be a perfect square");
+
+        Self { num_samples, n }
+    }
+}
+
+impl Generator for MultiJittered {
+    fn num_samples(&self) -> usize {
+        self.num_samples
+    }
+
+    fn new_square_set(&self) -> Vec<Vec2> {
+        let mut rng = thread_rng();
+        let mut xs = Vec::with_capacity(self.num_samples);
+        let mut ys = Vec::with_capacity(self.num_samples);
+
+        let subcell_size = 1.0 / self.num_samples as f64;
+        let dist = Uniform::new(0.0, subcell_size);
+
+        // create the grid in initial jittered n-rooks pattern
+        for i in 0..self.n {
+            for j in 0..self.n {
+                let x = (i * self.n + j) as f64;
+                let y = (j * self.n + i) as f64;
+
+                let point = Vec2::new(x, y) * subcell_size;
+                let jitter = Vec2::new(rng.sample(dist), rng.sample(dist));
+                let sample = point + jitter;
+
+                xs.push(sample.x);
+                ys.push(sample.y);
+            }
+        }
+
+        // shuffle x-coordinates
+        for row in 0..self.n {
+            for col in 0..(self.n - 1) {
+                let r = rng.gen_range(col, self.n - 1);
+                xs.swap(row * self.n + col, row * self.n + r);
+            }
+        }
+
+        // shuffle y-coordinates
+        for col in 0..self.n {
+            for row in 0..(self.n - 1) {
+                let r = rng.gen_range(row, self.n - 1);
+                ys.swap(row * self.n + col, r * self.n + col);
+            }
+        }
+
+        // join the coordinates and shuffle total order
+        let mut v: Vec<_> = xs
+            .into_iter()
+            .zip(ys.into_iter())
+            .map(|(x, y)| Vec2::new(x, y))
+            .collect();
+
+        v.shuffle(&mut rng);
+        return v;
+    }
+}
+
+/// Hammersley sampling.
+///
+/// A non-random sampler, based on computer representation of numbers in various prime
+/// bases.
+#[derive(Debug, Clone)]
+pub struct Hammersley {
+    num_samples: usize,
+}
+
+impl Hammersley {
+    pub fn new(num_samples: usize) -> Self {
+        Self { num_samples }
+    }
+}
+
+impl Generator for Hammersley {
+    fn num_samples(&self) -> usize {
+        self.num_samples
+    }
+
+    fn num_sets(&self) -> usize {
+        1
+    }
+
+    fn new_square_set(&self) -> Vec<Vec2> {
+        fn phi(j: usize) -> f64 {
+            let mut x = 0.0;
+            let mut f = 0.5;
+            let mut j = j;
+            while j != 0 {
+                x += f * (!j & 1) as f64;
+                j /= 2;
+                f *= 0.5;
+            }
+            return x;
+        }
+
+        let n = self.num_samples as f64;
+        (0..self.num_samples)
+            .map(|i| Vec2::new(i as f64 / n, phi(i)))
+            .collect()
     }
 }
 
@@ -165,6 +395,7 @@ pub struct Samples<T> {
     samples: Vec<Vec<T>>,
     num_samples: usize,
     count: usize,
+    indices: Vec<usize>,
 }
 
 impl<T: Clone> Samples<T> {
@@ -174,6 +405,7 @@ impl<T: Clone> Samples<T> {
             num_samples,
             samples,
             count: 0,
+            indices: (0..num_samples).collect(),
         }
     }
 
@@ -190,14 +422,18 @@ impl<T: Clone> Samples<T> {
     /// This never runs out.
     pub fn get_next(&mut self) -> &Vec<T> {
         // if we only have one set, just generate it over and over
-        // e.g. for Regular
-        if self.samples.len() > 1 {
-            self.count = (self.count + 1) % self.samples.len();
-            if self.count == 0 {
-                self.samples.shuffle(&mut thread_rng());
+        if self.indices.len() > 1 {
+            self.count += 1;
+            // TODO: at some point when this matters, do some benchmarks
+            // and see if a full shuffle is better, or if I should just
+            // skip some random number of indices.
+            // For now this is fine and intuitive though.
+            if self.count == self.indices.len() {
+                self.count = 0;
+                self.indices.shuffle(&mut thread_rng());
             }
         }
-        self.samples.get(self.count).unwrap()
+        self.samples.get(self.indices[self.count]).unwrap()
     }
 }
 
