@@ -163,7 +163,7 @@ impl Generator for Jittered {
 /// Regular sampling.
 ///
 /// Like [`Jittered`] sampling, splits up the unit square into a grid of tiles.
-/// Unlike `[Jittered`] sampling, we don't bother to jitter the samples.
+/// Unlike [`Jittered`] sampling, we don't bother to jitter the samples.
 #[derive(Debug, Clone)]
 pub struct Regular {
     num_samples: usize,
@@ -254,7 +254,7 @@ impl Generator for NRooks {
 /// is fulfilled. However, we also ensure that the placed samples are jittered in the
 /// upper level grid, to preserve a good 2D distribution.
 ///
-/// Similar to the [`Jittered`] sampler we must have `num_samples` be a perfect square.
+/// Similar to the [`Jittered`] sampler, we must have `num_samples` be a perfect square.
 #[derive(Debug, Clone)]
 pub struct MultiJittered {
     num_samples: usize,
@@ -262,6 +262,9 @@ pub struct MultiJittered {
 }
 
 impl MultiJittered {
+    /// Create a new generator.
+    ///
+    /// The paramater `num_samples` must be a square number.
     pub fn new(num_samples: usize) -> Self {
         let n = (num_samples as f64).sqrt() as usize;
         assert!(n * n == num_samples, "num_samples must be a perfect square");
@@ -289,12 +292,11 @@ impl Generator for MultiJittered {
                 let x = (i * self.n + j) as f64;
                 let y = (j * self.n + i) as f64;
 
-                let point = Vec2::new(x, y) * subcell_size;
-                let jitter = Vec2::new(rng.sample(dist), rng.sample(dist));
-                let sample = point + jitter;
+                let x = x * subcell_size + rng.sample(dist);
+                let y = y * subcell_size + rng.sample(dist);
 
-                xs.push(sample.x);
-                ys.push(sample.y);
+                xs.push(x);
+                ys.push(y);
             }
         }
 
