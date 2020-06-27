@@ -84,6 +84,77 @@ impl Div<Vec3> for f64 {
     }
 }
 
+/// A two-dimensional vector.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Vec2 {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Vec2 {
+    /// Creates a new vector with the given coordinates.
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
+    }
+
+    /// Calculates the dot product of two vectors.
+    pub fn dot(self, rhs: Self) -> f64 {
+        self.x * rhs.x + self.y * rhs.y
+    }
+
+    /// The magnitude of the vector.
+    pub fn mag(self) -> f64 {
+        self.dot(self).sqrt()
+    }
+
+    /// Returns the normalised vector.
+    pub fn normalise(self) -> Self {
+        self / self.mag()
+    }
+}
+
+impl Sub for Vec2 {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self {
+        Self::Output::new(self.x - rhs.x, self.y - rhs.y)
+    }
+}
+
+impl Add for Vec2 {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self {
+        Self::Output::new(self.x + rhs.x, self.y + rhs.y)
+    }
+}
+
+impl Mul<f64> for Vec2 {
+    type Output = Self;
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self::Output::new(self.x * rhs, self.y * rhs)
+    }
+}
+
+impl Mul<Vec2> for f64 {
+    type Output = Vec2;
+    fn mul(self, rhs: Vec2) -> Self::Output {
+        Self::Output::new(self * rhs.x, self * rhs.y)
+    }
+}
+
+impl Div<f64> for Vec2 {
+    type Output = Self;
+    fn div(self, rhs: f64) -> Self::Output {
+        Self::Output::new(self.x / rhs, self.y / rhs)
+    }
+}
+
+impl Div<Vec2> for f64 {
+    type Output = Vec2;
+    fn div(self, rhs: Vec2) -> Self::Output {
+        Self::Output::new(self / rhs.x, self / rhs.y)
+    }
+}
+
 /// A point in the RGB colour cube.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Colour {
@@ -212,9 +283,9 @@ impl Div<Colour> for f64 {
 impl From<Colour> for Rgb<u8> {
     fn from(c: Colour) -> Rgb<u8> {
         Rgb([
-            (c.r * 255.0).trunc() as u8,
-            (c.g * 255.0).trunc() as u8,
-            (c.b * 255.0).trunc() as u8,
+            (c.r * 255.0).min(255.0).max(0.0) as u8,
+            (c.g * 255.0).min(255.0).max(0.0) as u8,
+            (c.b * 255.0).min(255.0).max(0.0) as u8,
         ])
     }
 }

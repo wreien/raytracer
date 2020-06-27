@@ -15,7 +15,6 @@ pub trait Tracer {
 ///
 /// If the ray hits the first object in the world, colours the pixel red,
 /// else it colours the pixel black. Can't get any simpler ☺
-#[derive(Debug)]
 pub struct SimpleTracer {}
 
 impl Tracer for SimpleTracer {
@@ -31,7 +30,6 @@ impl Tracer for SimpleTracer {
 /// A slightly more interesting tracer for multiple objects.
 ///
 /// Uses `world::World::hit_objects` to find the closest object in the world.
-#[derive(Debug)]
 pub struct MultipleObjectTracer {}
 
 impl Tracer for MultipleObjectTracer {

@@ -17,8 +17,8 @@ pub trait Geometry: fmt::Debug {
 
     /// Returns the normal on the geometry at the given point.
     ///
-    /// Assumes the point is in fact (approximately) on the geometry, though it is
-    /// largely unlikely to matter.
+    /// Assumes the point is in fact (approximately) on the geometry, though it
+    /// is largely unlikely to matter.
     fn normal(&self, pos: Vec3) -> Vec3;
 }
 

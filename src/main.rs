@@ -1,4 +1,5 @@
 mod geometry;
+mod sampler;
 mod tracer;
 mod utility;
 mod world;
