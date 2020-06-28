@@ -402,12 +402,13 @@ pub struct Samples<T> {
 
 impl<T: Clone> Samples<T> {
     fn new(num_samples: usize, samples: Vec<Vec<T>>) -> Self {
+        let num_sets = samples.len();
         assert!(num_samples == samples[0].len());
         Self {
             num_samples,
             samples,
             count: 0,
-            indices: (0..num_samples).collect(),
+            indices: (0..num_sets).collect(),
         }
     }
 

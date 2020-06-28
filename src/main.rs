@@ -5,24 +5,26 @@ mod tracer;
 mod utility;
 mod world;
 
+use camera::{Camera, Location, ThinLens};
 use std::env;
-use world::World;
 use utility::Vec3;
-use camera::{Camera, Pinhole};
+use world::World;
 
 fn main() {
     let filename = env::args().nth(1).unwrap_or("demo.png".to_string());
-    let world = World::new();
-    let camera;
-    {
-        let eye = Vec3::new(0.0, 100.0, 500.0);
-        let centre = Vec3::new(0.0, 50.0, 0.0);
-        let up = utility::Vec3::new(0.0, 1.0, 0.0);
-        let distance = 300.0;
-        let zoom = 1.0;
 
-        camera = Pinhole::new(eye, centre, up, distance, zoom);
-    }
+    let sampler = sampler::Default::new(400);
+    let world = World::new(Box::new(sampler.clone()));
+
+    let location = Location {
+        eye: Vec3::new(0.0, 5.0, 50.0),
+        centre: Vec3::new(0.0, 5.0, 0.0),
+        up: utility::Vec3::new(0.0, 1.0, 0.0),
+    };
+    let view_len = 40.0;
+    let focal_len = 74.0;
+
+    let camera = ThinLens::new(location, view_len, focal_len, 1.0, 1.0, sampler);
 
     let tracer = tracer::MultipleObjectTracer {};
     let scene = camera.render_scene(&world, tracer);

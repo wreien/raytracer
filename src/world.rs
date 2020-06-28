@@ -35,16 +35,26 @@ impl World {
     /// Builds the world.
     ///
     /// Currently this is the place to change the scenery that is displayed.
-    pub fn new() -> Self {
+    pub fn new(sampler: Box<dyn sampler::Generator>) -> Self {
         let sphere_1 = Box::new(geometry::Sphere {
-            centre: Vec3::new(40.0, 80.0, 50.0),
-            radius: 80.0,
+            centre: Vec3::new(7.0, 4.0, 3.0),
+            radius: 4.0,
             colour: Colour::red(),
         });
         let sphere_2 = Box::new(geometry::Sphere {
-            centre: Vec3::new(-50.0, 60.0, 0.0),
-            radius: 60.0,
+            centre: Vec3::new(0.0, 4.0, -24.0),
+            radius: 4.0,
             colour: Colour::new(1.0, 1.0, 0.0), // yellow
+        });
+        let sphere_3 = Box::new(geometry::Sphere {
+            centre: Vec3::new(-7.0, 4.0, -51.0),
+            radius: 4.0,
+            colour: Colour::blue(),
+        });
+        let sphere_4 = Box::new(geometry::Sphere {
+            centre: Vec3::new(-21.0, 4.0, -99.0),
+            radius: 4.0,
+            colour: Colour::white(),
         });
         let plane = Box::new(geometry::Plane {
             point: Vec3::new(0.0, 0.0, 0.0),
@@ -54,13 +64,13 @@ impl World {
 
         Self {
             background: Colour::black(),
-            objects: vec![sphere_1, sphere_2, plane],
+            objects: vec![sphere_1, sphere_2, sphere_3, sphere_4, plane],
             view: ViewPlane {
-                hres: 200,
-                vres: 200,
-                s: 1.0,
+                hres: 400,
+                vres: 300,
+                s: 0.05,
                 gamma: 1.0,
-                sampler: Box::new(sampler::Default::new(25)),
+                sampler
             },
         }
     }
