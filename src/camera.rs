@@ -8,6 +8,7 @@ use crate::utility::{Colour, Ray, Vec2, Vec3};
 use crate::world::World;
 
 use image::{Rgb, RgbImage};
+use indicatif::ProgressIterator;
 
 /// Renders scenes.
 ///
@@ -94,7 +95,7 @@ impl Camera for Pinhole {
         let scale = world.view.s / self.zoom;
         let origin = self.eye;
 
-        for col in 0..world.view.hres {
+        for col in (0..world.view.hres).progress() {
             for row in 0..world.view.vres {
                 let c = col as f64;
                 let r = row as f64;
@@ -199,7 +200,7 @@ impl<G: Generator> Camera for ThinLens<G> {
 
         let scale = world.view.s / self.zoom;
 
-        for col in 0..world.view.hres {
+        for col in (0..world.view.hres).progress() {
             for row in 0..world.view.vres {
                 let c = col as f64;
                 let r = row as f64;
