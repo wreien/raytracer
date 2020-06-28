@@ -188,8 +188,8 @@ impl Generator for Regular {
     }
 
     fn num_sets(&self) -> usize {
-        // only one kind of regular
-        1
+        // with only one sample, every set is the same
+        if self.num_samples == 1 { 1 } else { NUM_SETS }
     }
 
     fn new_square_set(&self) -> Vec<Vec2> {
@@ -201,7 +201,8 @@ impl Generator for Regular {
                 s.push(Vec2::new(x, y) / (self.n as f64));
             }
         }
-        s
+        s.shuffle(&mut thread_rng());
+        return s;
     }
 }
 
@@ -317,11 +318,11 @@ impl Generator for MultiJittered {
         }
 
         // join the coordinates and shuffle total order
-        let mut v: Vec<_> = xs
+        let mut v = xs
             .into_iter()
             .zip(ys.into_iter())
             .map(|(x, y)| Vec2::new(x, y))
-            .collect();
+            .collect::<Vec<_>>();
 
         v.shuffle(&mut rng);
         return v;
@@ -348,10 +349,6 @@ impl Generator for Hammersley {
         self.num_samples
     }
 
-    fn num_sets(&self) -> usize {
-        1
-    }
-
     fn new_square_set(&self) -> Vec<Vec2> {
         fn phi(j: usize) -> f64 {
             let mut x = 0.0;
@@ -366,9 +363,12 @@ impl Generator for Hammersley {
         }
 
         let n = self.num_samples as f64;
-        (0..self.num_samples)
+        let mut v = (0..self.num_samples)
             .map(|i| Vec2::new(i as f64 / n, phi(i)))
-            .collect()
+            .collect::<Vec<_>>();
+
+        v.shuffle(&mut thread_rng());
+        return v;
     }
 }
 
