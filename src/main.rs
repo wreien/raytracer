@@ -5,7 +5,7 @@ mod tracer;
 mod utility;
 mod world;
 
-use camera::{Camera, Location, ThinLens};
+use camera::{Camera, Location};
 use std::env;
 use utility::Vec3;
 use world::World;
@@ -13,7 +13,7 @@ use world::World;
 fn main() {
     let filename = env::args().nth(1).unwrap_or("demo.png".to_string());
 
-    let sampler = sampler::Default::new(400);
+    let sampler = sampler::Default::new(256);
     let world = World::new(Box::new(sampler.clone()));
 
     let location = Location {
@@ -24,7 +24,8 @@ fn main() {
     let view_len = 40.0;
     let focal_len = 74.0;
 
-    let camera = ThinLens::new(location, view_len, focal_len, 1.0, 1.0, sampler);
+    //let camera = ThinLens::new(location, view_len, focal_len, 1.0, 1.0, sampler);
+    let camera = camera::Pinhole::new(location, view_len, 1.0);
 
     let tracer = tracer::MultipleObjectTracer {};
     let scene = camera.render_scene(&world, tracer);

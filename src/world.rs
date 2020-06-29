@@ -36,35 +36,41 @@ impl World {
     ///
     /// Currently this is the place to change the scenery that is displayed.
     pub fn new(sampler: Box<dyn sampler::Generator>) -> Self {
-        let sphere_1 = Box::new(geometry::Sphere {
+        let mut objects: Vec<Box<dyn Geometry>> = vec![];
+        objects.push(Box::new(geometry::Sphere {
             centre: Vec3::new(7.0, 4.0, 3.0),
             radius: 4.0,
             colour: Colour::red(),
-        });
-        let sphere_2 = Box::new(geometry::Sphere {
+        }));
+        objects.push(Box::new(geometry::Sphere {
             centre: Vec3::new(0.0, 4.0, -24.0),
             radius: 4.0,
             colour: Colour::new(1.0, 1.0, 0.0), // yellow
-        });
-        let sphere_3 = Box::new(geometry::Sphere {
+        }));
+        objects.push(Box::new(geometry::Sphere {
             centre: Vec3::new(-7.0, 4.0, -51.0),
             radius: 4.0,
             colour: Colour::blue(),
-        });
-        let sphere_4 = Box::new(geometry::Sphere {
-            centre: Vec3::new(-21.0, 4.0, -99.0),
+        }));
+        objects.push(Box::new(geometry::Sphere {
+            centre: Vec3::new(-14.0, 4.0, -78.0),
             radius: 4.0,
             colour: Colour::white(),
-        });
-        let plane = Box::new(geometry::Plane {
+        }));
+        objects.push(Box::new(geometry::Plane {
             point: Vec3::new(0.0, 0.0, 0.0),
             normal: Vec3::new(0.0, 1.0, 0.0),
             colour: Colour::new(0.0, 0.3, 0.0), // dark green
-        });
+        }));
+        objects.push(Box::new(geometry::Cuboid {
+            min: Vec3::new(20.0, 0.0, -100.0),
+            max: Vec3::new(0.0, 15.0, -85.0),
+            colour: Colour::green(),
+        }));
 
         Self {
             background: Colour::black(),
-            objects: vec![sphere_1, sphere_2, sphere_3, sphere_4, plane],
+            objects,
             view: ViewPlane {
                 hres: 400,
                 vres: 300,

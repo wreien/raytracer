@@ -99,7 +99,7 @@ impl Camera for Pinhole {
             for row in 0..world.view.vres {
                 let c = col as f64;
                 let r = row as f64;
-                let pixel = Vec2::new(width * 0.5 - c, height * 0.5 - r);
+                let pixel = Vec2::new(c - width * 0.5, height * 0.5 - r);
 
                 #[rustfmt::skip]
                 let colour = samples
@@ -204,7 +204,7 @@ impl<G: Generator> Camera for ThinLens<G> {
             for row in 0..world.view.vres {
                 let c = col as f64;
                 let r = row as f64;
-                let pixel = Vec2::new(width * 0.5 - c, height * 0.5 - r);
+                let pixel = Vec2::new(c - width * 0.5, height * 0.5 - r);
 
                 let colour = antialias
                     .get_next()
