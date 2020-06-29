@@ -45,6 +45,35 @@ pub struct Sphere {
     pub colour: Colour,
 }
 
+/// An axis-aligned cuboid.
+///
+/// # TODO
+///
+/// Add support for being, well, not axis-aligned.
+#[derive(Debug)]
+pub struct Cuboid {
+    /// Min point.
+    pub min: Vec3,
+    /// Max point.
+    pub max: Vec3,
+    pub colour: Colour,
+}
+
+#[allow(dead_code)]
+impl Cuboid {
+    pub fn new(min: Vec3, max: Vec3, colour: Colour) -> Self {
+        Self { min, max, colour }
+    }
+
+    pub fn with_size(origin: Vec3, size: Vec3, colour: Colour) -> Self {
+        Self {
+            min: origin,
+            max: origin + size,
+            colour,
+        }
+    }
+}
+
 impl Geometry for Plane {
     fn hit(&self, ray: &Ray) -> Option<Intersection> {
         let offset = self.point - ray.origin;
@@ -103,6 +132,55 @@ impl Geometry for Sphere {
 
     fn normal(&self, pos: Vec3) -> Vec3 {
         (pos - self.centre).normalise()
+    }
+}
+
+impl Geometry for Cuboid {
+    /// Calculates the intersection point using slab intersection.
+    fn hit(&self, ray: &Ray) -> Option<Intersection> {
+        // TODO: include this in the ray itself?
+        let invdir = 1.0 / ray.direction;
+
+        let t_x1 = (self.min.x - ray.origin.x) * invdir.x;
+        let t_x2 = (self.max.x - ray.origin.x) * invdir.x;
+        let t_y1 = (self.min.y - ray.origin.y) * invdir.y;
+        let t_y2 = (self.max.y - ray.origin.y) * invdir.y;
+        let t_z1 = (self.min.z - ray.origin.z) * invdir.z;
+        let t_z2 = (self.max.z - ray.origin.z) * invdir.z;
+
+        let t_xn = t_x1.min(t_x2);
+        let t_xf = t_x1.max(t_x2);
+        let t_yn = t_y1.min(t_y2);
+        let t_yf = t_y1.max(t_y2);
+        let t_zn = t_z1.min(t_z2);
+        let t_zf = t_z1.max(t_z2);
+
+        let t_min = t_xn.max(t_yn.max(t_zn));
+        let t_max = t_xf.min(t_yf.min(t_zf));
+
+        if t_min < t_max {
+            let t = if t_min < 0.0 { t_max } else { t_min };
+            Some(Intersection {
+                ray: ray.clone(),
+                t,
+                colour: self.colour,
+            })
+        } else {
+            None
+        }
+    }
+
+    fn normal(&self, pos: Vec3) -> Vec3 {
+        let centre = (self.min + self.max) * 0.5;
+        let offset = pos - centre;
+        let divisor = (self.min - self.max) * 0.5;
+        let bias = 1.0 + EPSILON;
+
+        Vec3 {
+            x: (offset.x / divisor.x.abs() * bias).trunc(),
+            y: (offset.y / divisor.y.abs() * bias).trunc(),
+            z: (offset.z / divisor.z.abs() * bias).trunc(),
+        }.normalise()
     }
 }
 
