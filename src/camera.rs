@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use crate::sampler::Generator;
 use crate::tracer::Tracer;
 use crate::utility::{Colour, Ray, Vec2, Vec3};
-use crate::world::World;
+use crate::world::{ViewPlane, World};
 
 use image::{Rgb, RgbImage};
 use indicatif::ProgressIterator;
@@ -42,6 +42,31 @@ fn compute_basis_vectors(Location { eye, centre, up }: &Location) -> (Vec3, Vec3
     let u = up.cross(w).normalise();
     let v = w.cross(u);
     (u, v, w)
+}
+
+/// Call the given function for every pixel in the view plane.
+fn loop_through_viewplane<F>(view: &ViewPlane, mut colour_fn: F) -> RgbImage
+where
+    F: FnMut(Vec2) -> Colour,
+{
+    let mut img = RgbImage::new(view.hres, view.vres);
+
+    let width = f64::from(view.hres - 1);
+    let height = f64::from(view.vres - 1);
+
+    for col in (0..view.hres).progress() {
+        for row in 0..view.vres {
+            let pixel = Vec2 {
+                x: (col as f64) - width * 0.5,
+                y: height * 0.5 - (row as f64),
+            };
+
+            let colour = colour_fn(pixel);
+            img.put_pixel(col, row, Rgb::from(colour));
+        }
+    }
+
+    return img;
 }
 
 /// A virtual pinhole camera.
@@ -84,42 +109,28 @@ impl Pinhole {
 
 impl Camera for Pinhole {
     fn render_scene<T: Tracer>(&self, world: &World, tracer: T) -> RgbImage {
-        let mut img = RgbImage::new(world.view.hres, world.view.vres);
         let mut samples = world.view.sampler.gen_square_samples();
         let num_samples = samples.num_samples() as f64;
 
-        let width = f64::from(world.view.hres - 1);
-        let height = f64::from(world.view.vres - 1);
-
-        let scale = world.view.s / self.zoom;
         let origin = self.eye;
+        let scale = world.view.s / self.zoom;
 
-        for col in (0..world.view.hres).progress() {
-            for row in 0..world.view.vres {
-                let c = col as f64;
-                let r = row as f64;
-                let pixel = Vec2::new(c - width * 0.5, height * 0.5 - r);
+        loop_through_viewplane(&world.view, |pixel| {
+            samples
+                .get_next()
+                .iter()
+                .fold(Colour::black(), |accum, &sample| {
+                    let point = (pixel + sample) * scale;
+                    let direction = self.ray_direction(point);
 
-                #[rustfmt::skip]
-                let colour = samples
-                    .get_next()
-                    .iter()
-                    .fold(Colour::black(), |accum, &sample| {
-                        let point = (pixel + sample) * scale;
-                        let direction = self.ray_direction(point);
+                    let ray = Ray { origin, direction };
+                    let colour = tracer.trace_ray(world, ray);
 
-                        let ray = Ray { origin, direction };
-                        let colour = tracer.trace_ray(world, ray);
-
-                        accum + colour
-                    });
-                let colour = colour * self.exposure / num_samples;
-
-                img.put_pixel(col, row, Rgb::from(colour));
-            }
-        }
-
-        return img;
+                    accum + colour
+                })
+                * self.exposure
+                / num_samples
+        })
     }
 }
 
@@ -188,46 +199,33 @@ impl<G: Generator> ThinLens<G> {
 
 impl<G: Generator> Camera for ThinLens<G> {
     fn render_scene<T: Tracer>(&self, world: &World, tracer: T) -> RgbImage {
-        let mut img = RgbImage::new(world.view.hres, world.view.vres);
-        let mut antialias = world.view.sampler.gen_square_samples();
-        let mut disk_pnt = self.sampler.gen_disc_samples();
+        let mut pixel_samples = world.view.sampler.gen_square_samples();
+        let mut disc_samples = self.sampler.gen_disc_samples();
 
-        assert!(antialias.num_samples() == disk_pnt.num_samples());
-        let num_samples = antialias.num_samples() as f64;
-
-        let width = f64::from(world.view.hres - 1);
-        let height = f64::from(world.view.vres - 1);
+        assert!(pixel_samples.num_samples() == disc_samples.num_samples());
+        let num_samples = pixel_samples.num_samples() as f64;
 
         let scale = world.view.s / self.zoom;
 
-        for col in (0..world.view.hres).progress() {
-            for row in 0..world.view.vres {
-                let c = col as f64;
-                let r = row as f64;
-                let pixel = Vec2::new(c - width * 0.5, height * 0.5 - r);
+        loop_through_viewplane(&world.view, |pixel| {
+            pixel_samples
+                .get_next()
+                .iter()
+                .zip(disc_samples.get_next().iter())
+                .fold(Colour::black(), |accum, (&sample, &disc_point)| {
+                    let pixel_point = (pixel + sample) * scale;
+                    let lens_point = disc_point * self.lens_radius;
 
-                let colour = antialias
-                    .get_next()
-                    .iter()
-                    .zip(disk_pnt.get_next().iter())
-                    .fold(Colour::black(), |accum, (&sample, &disc_point)| {
-                        let pixel_point = (pixel + sample) * scale;
-                        let lens_point = disc_point * self.lens_radius;
+                    let ray = Ray {
+                        origin: self.ray_origin(lens_point),
+                        direction: self.ray_direction(pixel_point, lens_point),
+                    };
+                    let colour = tracer.trace_ray(world, ray);
 
-                        let ray = Ray {
-                            origin: self.ray_origin(lens_point),
-                            direction: self.ray_direction(pixel_point, lens_point),
-                        };
-                        let colour = tracer.trace_ray(world, ray);
-
-                        accum + colour
-                    });
-                let colour = colour * self.exposure / num_samples;
-
-                img.put_pixel(col, row, Rgb::from(colour));
-            }
-        }
-
-        return img;
+                    accum + colour
+                })
+                * self.exposure
+                / num_samples
+        })
     }
 }
