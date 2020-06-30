@@ -6,7 +6,7 @@ use crate::utility::{Colour, Ray, Vec2, Vec3};
 use crate::world::{ViewPlane, World};
 
 use image::{Rgb, RgbImage};
-use indicatif::ProgressIterator;
+use indicatif::{ProgressBar, ProgressStyle};
 
 /// Renders scenes.
 ///
@@ -54,7 +54,12 @@ where
     let width = f64::from(view.hres - 1);
     let height = f64::from(view.vres - 1);
 
-    for col in (0..view.hres).progress() {
+    let style = ProgressStyle::default_bar()
+        .template("[{elapsed_precise}] {bar:50} {percent}% (ETA: {eta})");
+    let bar = ProgressBar::new(view.hres as u64).with_style(style);
+
+    for col in 0..view.hres {
+        bar.inc(1);
         for row in 0..view.vres {
             let pixel = Vec2 {
                 x: (col as f64) - width * 0.5,
@@ -65,6 +70,8 @@ where
             img.put_pixel(col, row, Rgb::from(colour));
         }
     }
+
+    bar.finish_and_clear();
 
     return img;
 }

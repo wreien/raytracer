@@ -8,17 +8,23 @@ use raytracer::{
 };
 
 use std::env;
+use std::time::Instant;
 
 fn main() {
     let filename = env::args().nth(1).unwrap_or("demo.png".to_string());
 
-    let sampler = Sampler::new(25);
+    let now = Instant::now();
+
+    let sampler = Sampler::new(256);
     let camera = setup_camera(sampler.clone());
     let viewplane = ViewPlane::new(400, 300, 0.05, sampler);
 
     let objects = build_scene();
     let world = World::new(objects, viewplane);
     let scene = camera.render_scene(&world, MultipleObjectTracer {});
+
+    let elapsed = now.elapsed().as_millis();
+    println!("Rendered in {} seconds.", elapsed as f64 / 1000.0);
 
     match scene.save(&filename) {
         Ok(_) => println!("Saved to \"{}\".", filename),
