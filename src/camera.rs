@@ -1,3 +1,5 @@
+//! Renderers with different projections and techniques.
+
 use std::fmt::Debug;
 
 use crate::sampler::Generator;
@@ -230,6 +232,92 @@ impl<G: Generator> Camera for ThinLens<G> {
                     let colour = tracer.trace_ray(world, ray);
 
                     accum + colour
+                })
+                * self.exposure
+                / num_samples
+        })
+    }
+}
+
+/// Fisheye camera.
+///
+/// This is a non-linear projection: that is, the view does not preserve
+/// straight lines in the output. Since it's a radial projection, it currently
+/// only works for projecting circles; anything that outside of this is renders
+/// as black.
+#[derive(Debug)]
+pub struct Fisheye {
+    /// Ratio of exposure.
+    pub exposure: f64,
+    /// Derives the field-of-view angle.
+    psi_max: f64,
+    /// The position of the camera.
+    eye: Vec3,
+    /// Orthonormal basis vectors for the camera.
+    basis: (Vec3, Vec3, Vec3),
+}
+
+impl Fisheye {
+    /// Create a new fish-eye camera.
+    ///
+    /// The `view_angle` is a measurement of the desired field of view, in
+    /// degrees. A fairly tame result can be achieved with a value of
+    /// `180.0`.
+    pub fn new(location: Location, view_angle: f64) -> Self {
+        let psi_max = view_angle.to_radians() / 2.0;
+        let basis = compute_basis_vectors(&location);
+        Self {
+            exposure: 1.0,
+            psi_max,
+            eye: location.eye,
+            basis,
+        }
+    }
+
+    fn ray_direction(&self, point: Vec2, view: &ViewPlane) -> Option<Vec3> {
+        let scaled = Vec2::new(view.hres as f64, view.vres as f64) * view.s;
+        let ndc = Vec2::new(point.x * 2.0 / scaled.x, point.y * 2.0 / scaled.y);
+        let r_squared = ndc.x * ndc.x + ndc.y * ndc.y;
+
+        if r_squared <= 1.0 {
+            let r = r_squared.sqrt();
+            let psi = r * self.psi_max;
+
+            let sin_psi = psi.sin();
+            let cos_psi = psi.cos();
+
+            let sin_alpha = ndc.y / r;
+            let cos_alpha = ndc.x / r;
+
+            let (u, v, w) = self.basis;
+            Some(sin_psi * cos_alpha * u + sin_psi * sin_alpha * v - cos_psi * w)
+        } else {
+            None
+        }
+    }
+}
+
+impl Camera for Fisheye {
+    fn render_scene<T: Tracer>(&self, world: &World, tracer: T) -> RgbImage {
+        let mut samples = world.view.sampler.gen_square_samples();
+        let num_samples = samples.num_samples() as f64;
+
+        let origin = self.eye;
+        let scale = world.view.s;
+
+        loop_through_viewplane(&world.view, |pixel| {
+            samples
+                .get_next()
+                .iter()
+                .fold(Colour::black(), |accum, &sample| {
+                    let point = (pixel + sample) * scale;
+                    if let Some(direction) = self.ray_direction(point, &world.view) {
+                        let ray = Ray { origin, direction };
+                        let colour = tracer.trace_ray(&world, ray);
+                        accum + colour
+                    } else {
+                        accum
+                    }
                 })
                 * self.exposure
                 / num_samples

@@ -15,12 +15,12 @@ fn main() {
 
     let now = Instant::now();
 
-    let sampler = Sampler::new(256);
+    let sampler = Sampler::new(25);
     let camera = setup_camera(sampler.clone());
-    let viewplane = ViewPlane::new(400, 300, 0.05, sampler);
+    let viewplane = ViewPlane::new(400, 400, 0.05, sampler);
 
     let objects = build_scene();
-    let world = World::new(objects, viewplane);
+    let world = World::new(objects, viewplane, Colour::new(0.7, 0.7, 1.0));
     let scene = camera.render_scene(&world, MultipleObjectTracer {});
 
     let elapsed = now.elapsed().as_millis();
@@ -32,20 +32,19 @@ fn main() {
     }
 }
 
-fn setup_camera<S: sampler::Generator>(sampler: S) -> impl Camera {
+fn setup_camera<S: sampler::Generator>(_sampler: S) -> impl Camera {
     let location = camera::Location {
-        eye: Vec3::new(-10.0, 5.0, 50.0),
-        centre: Vec3::new(0.0, 5.0, 0.0),
+        eye: Vec3::new(-10.0, 25.0, 0.0),
+        centre: Vec3::new(0.0, 5.0, -20.0),
         up: Vec3::new(0.0, 1.0, 0.0),
     };
-    let view_len = 40.0;
-
-    //---
-
-    let focal_len = 74.0;
-    camera::ThinLens::new(location, view_len, focal_len, 1.0, 1.0, sampler)
+    // let view_len = 40.0;
+    // let focal_len = 74.0;
+    // camera::ThinLens::new(location, view_len, focal_len, 1.0, 1.0, sampler)
 
     // camera::Pinhole::new(location, view_len, 1.0)
+
+    camera::Fisheye::new(location, 180.0)
 }
 
 fn build_scene() -> Vec<Box<dyn Geometry>> {
