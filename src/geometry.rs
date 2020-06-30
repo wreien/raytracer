@@ -59,7 +59,6 @@ pub struct Cuboid {
     pub colour: Colour,
 }
 
-#[allow(dead_code)]
 impl Cuboid {
     pub fn new(min: Vec3, max: Vec3, colour: Colour) -> Self {
         Self { min, max, colour }
@@ -180,7 +179,8 @@ impl Geometry for Cuboid {
             x: (offset.x / divisor.x.abs() * bias).trunc(),
             y: (offset.y / divisor.y.abs() * bias).trunc(),
             z: (offset.z / divisor.z.abs() * bias).trunc(),
-        }.normalise()
+        }
+        .normalise()
     }
 }
 

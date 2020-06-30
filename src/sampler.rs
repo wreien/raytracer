@@ -11,8 +11,6 @@
 //!
 //! In the meantime, this will suffice.
 
-#![allow(dead_code)]
-
 use crate::utility::{Vec2, Vec3};
 use rand::{distributions::Uniform, seq::SliceRandom, thread_rng, Rng};
 use std::{f64, fmt::Debug};
@@ -189,7 +187,11 @@ impl Generator for Regular {
 
     fn num_sets(&self) -> usize {
         // with only one sample, every set is the same
-        if self.num_samples == 1 { 1 } else { NUM_SETS }
+        if self.num_samples == 1 {
+            1
+        } else {
+            NUM_SETS
+        }
     }
 
     fn new_square_set(&self) -> Vec<Vec2> {
@@ -250,12 +252,14 @@ impl Generator for NRooks {
 
 /// MultiJittered sampling.
 ///
-/// An combination of [`NRooks`] and [`Jittered`] sampling. We construct a two-level
-/// grid, and place a sample within the lower level grid such that the n-rooks condition
-/// is fulfilled. However, we also ensure that the placed samples are jittered in the
-/// upper level grid, to preserve a good 2D distribution.
+/// A combination of [`NRooks`] and [`Jittered`] sampling. We construct a
+/// two-level grid, and place a sample within the lower level grid such that the
+/// n-rooks condition is fulfilled. However, we also ensure that the placed
+/// samples are jittered in the upper level grid, to preserve a good 2D
+/// distribution.
 ///
-/// Similar to the [`Jittered`] sampler, we must have `num_samples` be a perfect square.
+/// Similar to the [`Jittered`] sampler, we must have `num_samples` be a perfect
+/// square.
 #[derive(Debug, Clone)]
 pub struct MultiJittered {
     num_samples: usize,
@@ -331,8 +335,8 @@ impl Generator for MultiJittered {
 
 /// Hammersley sampling.
 ///
-/// A non-random sampler, based on computer representation of numbers in various prime
-/// bases.
+/// A non-random sampler, based on the computer representation of numbers in
+/// various prime bases.
 #[derive(Debug, Clone)]
 pub struct Hammersley {
     num_samples: usize,

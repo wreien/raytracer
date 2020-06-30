@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::fmt::Debug;
 
 use crate::sampler::Generator;
@@ -12,8 +10,9 @@ use indicatif::ProgressIterator;
 
 /// Renders scenes.
 ///
-/// Different cameras will use different projections and/or techniques to do rendering.
-/// Look at the documentation for each individual camera to determine what they do.
+/// Different cameras will use different projections and/or techniques to do
+/// rendering. Look at the documentation for each individual camera to determine
+/// what they do.
 pub trait Camera: Debug {
     /// Renders the scene for the given `world`.
     ///
@@ -126,10 +125,11 @@ impl Camera for Pinhole {
 
 /// Camera with depth-of-field simulation.
 ///
-/// This approximates a camera with a thin lens of finite width, in comparison to
-/// the infinitely small lens of the [`Pinhole`] camera. This can be used to approximate
-/// depth-of-field, where the focal plane of the scenery is in focus and objects further
-/// away from the focal plane become progressively less in-focus.
+/// This approximates a camera with a thin lens of finite width, in comparison
+/// to the infinitely small lens of the [`Pinhole`] camera. This can be used to
+/// approximate depth-of-field, where the focal plane of the scenery is in focus
+/// and objects further away from the focal plane become progressively less
+/// in-focus.
 #[derive(Debug)]
 pub struct ThinLens<G: Generator> {
     /// Ratio of exposure.
