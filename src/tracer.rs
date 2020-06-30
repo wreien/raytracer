@@ -1,9 +1,9 @@
-//! Various kinds of raytracers
+//! Ray tracers using different techniques.
 
 use crate::utility::{Colour, Ray};
 use crate::world::World;
 
-/// An abstract raytracer.
+/// An abstract ray tracer.
 ///
 /// Allows using different techniques and methods to get the colour of a ray.
 pub trait Tracer {
@@ -29,7 +29,9 @@ impl Tracer for SimpleTracer {
 
 /// A slightly more interesting tracer for multiple objects.
 ///
-/// Uses `world::World::hit_objects` to find the closest object in the world.
+/// Uses [`world::World::hit_objects`] to find the closest object in the world.
+///
+/// [`world::World::hit_objects`]: crate::world::World::hit_objects()
 pub struct MultipleObjectTracer {}
 
 impl Tracer for MultipleObjectTracer {

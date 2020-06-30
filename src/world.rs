@@ -47,12 +47,14 @@ pub struct World {
 }
 
 impl World {
-    /// Builds the world.
-    ///
-    /// Currently this is the place to change the scenery that is displayed.
-    pub fn new(objects: Vec<Box<dyn Geometry>>, view: ViewPlane) -> Self {
+    /// Create the world.
+    pub fn new(
+        objects: Vec<Box<dyn Geometry>>,
+        view: ViewPlane,
+        background: Colour,
+    ) -> Self {
         Self {
-            background: Colour::black(),
+            background,
             objects,
             view,
         }
