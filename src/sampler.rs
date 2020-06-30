@@ -35,8 +35,8 @@ const NUM_SETS: usize = 83;
 /// # Example
 ///
 /// ```
-/// fn get_generator() -> impl Generator;
-/// # fn get_generator() -> impl Generator { Jittered::new(25) }
+/// use raytracer::sampler::*;
+/// fn get_generator() -> impl Generator { Jittered::new(25) }
 ///
 /// let gen = get_generator();
 /// let mut sample_set = gen.gen_square_samples();
@@ -389,6 +389,8 @@ impl Generator for Hammersley {
 /// # Example
 ///
 /// ```no_run
+/// use raytracer::sampler::*;
+///
 /// let mut sample_set = Jittered::new(25).gen_square_samples();
 /// loop {
 ///     // Generate a set 25 random samples in a unit square
