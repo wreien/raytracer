@@ -1,6 +1,7 @@
 //! Renderers with different projections and techniques.
 
 use std::fmt::Debug;
+use std::f64::consts;
 
 use crate::sampler::Generator;
 use crate::tracer::Tracer;
@@ -86,12 +87,11 @@ where
 #[derive(Debug)]
 pub struct Pinhole {
     /// Ratio of exposure.
-    pub exposure: f64,
+    exposure: f64,
     /// Distance to the view plane.
-    pub view_len: f64,
+    view_len: f64,
     /// Zoom factor.
-    pub zoom: f64,
-
+    zoom: f64,
     /// The position of the camera.
     eye: Vec3,
     /// Orthonormal basis vectors for the camera.
@@ -153,18 +153,17 @@ impl Camera for Pinhole {
 #[derive(Debug)]
 pub struct ThinLens<G: Generator> {
     /// Ratio of exposure.
-    pub exposure: f64,
+    exposure: f64,
     /// Size of the lens
-    pub lens_radius: f64,
+    lens_radius: f64,
     /// View plane distance
-    pub view_len: f64,
+    view_len: f64,
     /// Focal plane distance
-    pub focal_len: f64,
+    focal_len: f64,
     /// Zoom factor
-    pub zoom: f64,
+    zoom: f64,
     /// Sampler used to generate rays from the lens
-    pub sampler: G,
-
+    sampler: G,
     /// The position of the camera.
     eye: Vec3,
     /// Orthonormal basis vectors for the camera.
@@ -248,7 +247,7 @@ impl<G: Generator> Camera for ThinLens<G> {
 #[derive(Debug)]
 pub struct Fisheye {
     /// Ratio of exposure.
-    pub exposure: f64,
+    exposure: f64,
     /// Derives the field-of-view angle.
     psi_max: f64,
     /// The position of the camera.
@@ -275,6 +274,7 @@ impl Fisheye {
     }
 
     fn ray_direction(&self, point: Vec2, view: &ViewPlane) -> Option<Vec3> {
+        // get normalised device coordinates
         let scaled = Vec2::new(view.hres as f64, view.vres as f64) * view.s;
         let ndc = Vec2::new(point.x * 2.0 / scaled.x, point.y * 2.0 / scaled.y);
         let r_squared = ndc.x * ndc.x + ndc.y * ndc.y;
@@ -318,6 +318,90 @@ impl Camera for Fisheye {
                     } else {
                         accum
                     }
+                })
+                * self.exposure
+                / num_samples
+        })
+    }
+}
+
+/// A spherical panorama projection.
+///
+/// This is a non-linear projection: that is, the view does not preserve
+/// straight lines in the output. Unlike [`Fisheye`], this projection will
+/// work even outside of circles.
+#[derive(Debug)]
+pub struct Spherical {
+    /// Ratio of exposure.
+    exposure: f64,
+    /// Derives the field-of-view angle on the `(u, w)` plane, i.e. horizontally.
+    max_azimuth: f64,
+    /// Derives the field-of-view angle on the `(u, v)` plane, i.e. vertically.
+    max_polar: f64,
+    /// The position of the camera.
+    eye: Vec3,
+    /// Orthonormal basis vectors for the camera.
+    basis: (Vec3, Vec3, Vec3),
+}
+
+impl Spherical {
+    /// Create a new fish-eye camera.
+    ///
+    /// `azimuth` and `polar` specify the field of view in the horizontal and vertical
+    /// directions, respectively. They are specified in degrees for this builder
+    /// function.
+    pub fn new(location: Location, azimuth: f64, polar: f64) -> Self {
+        let max_azimuth = azimuth.to_radians();
+        let max_polar = polar.to_radians();
+        let basis = compute_basis_vectors(&location);
+        Self {
+            exposure: 1.0,
+            max_azimuth,
+            max_polar,
+            eye: location.eye,
+            basis,
+        }
+    }
+
+    fn ray_direction(&self, point: Vec2, view: &ViewPlane) -> Vec3 {
+        // get normalised device coordinates
+        let scaled = Vec2::new(view.hres as f64, view.vres as f64) * view.s;
+        let ndc = Vec2::new(point.x * 2.0 / scaled.x, point.y * 2.0 / scaled.y);
+
+        let lambda = ndc.x * self.max_azimuth;
+        let psi = ndc.y * self.max_polar;
+
+        let phi = consts::PI - lambda;
+        let theta = consts::FRAC_PI_2 - psi;
+
+        let sin_phi = phi.sin();
+        let cos_phi = phi.cos();
+        let sin_theta = theta.sin();
+        let cos_theta = theta.cos();
+
+        let (u, v, w) = self.basis;
+        sin_theta * sin_phi * u + cos_theta * v + sin_theta * cos_phi * w
+    }
+}
+
+impl Camera for Spherical {
+    fn render_scene<T: Tracer>(&self, world: &World, tracer: T) -> RgbImage {
+        let mut samples = world.view.sampler.gen_square_samples();
+        let num_samples = samples.num_samples() as f64;
+
+        let origin = self.eye;
+        let scale = world.view.s;
+
+        loop_through_viewplane(&world.view, |pixel| {
+            samples
+                .get_next()
+                .iter()
+                .fold(Colour::black(), |accum, &sample| {
+                    let point = (pixel + sample) * scale;
+                    let direction = self.ray_direction(point, &world.view);
+                    let ray = Ray { origin, direction };
+                    let colour = tracer.trace_ray(&world, ray);
+                    accum + colour
                 })
                 * self.exposure
                 / num_samples

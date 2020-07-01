@@ -44,7 +44,9 @@ fn setup_camera<S: sampler::Generator>(_sampler: S) -> impl Camera {
 
     // camera::Pinhole::new(location, view_len, 1.0)
 
-    camera::Fisheye::new(location, 180.0)
+    // camera::Fisheye::new(location, 180.0)
+
+    camera::Spherical::new(location, 84.0, 56.0)
 }
 
 fn build_scene() -> Vec<Box<dyn Geometry>> {
