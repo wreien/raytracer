@@ -13,20 +13,18 @@ const EPSILON: f64 = 0.0001;
 pub trait Geometry: fmt::Debug {
     /// If the ray will collide with this geometry, returns details on the
     /// intersection.
-    fn hit(&self, ray: &Ray) -> Option<Intersection>;
+    fn hit(&self, ray: &Ray) -> Option<(f64, &dyn Geometry)>;
 
     /// Returns the normal on the geometry at the given point.
     ///
     /// Assumes the point is in fact (approximately) on the geometry, though it
     /// is largely unlikely to matter.
     fn normal(&self, pos: Vec3) -> Vec3;
-}
 
-/// The result of an intersection.
-pub struct Intersection {
-    pub ray: Ray,
-    pub t: f64,
-    pub colour: Colour, // temporary
+    /// Get the colour of the object.
+    ///
+    /// Temporary, until we implement materials.
+    fn colour(&self) -> Colour;
 }
 
 /// An infinite plane.
@@ -74,15 +72,11 @@ impl Cuboid {
 }
 
 impl Geometry for Plane {
-    fn hit(&self, ray: &Ray) -> Option<Intersection> {
+    fn hit(&self, ray: &Ray) -> Option<(f64, &dyn Geometry)> {
         let offset = self.point - ray.origin;
         let t = offset.dot(self.normal) / ray.direction.dot(self.normal);
         if t > EPSILON {
-            Some(Intersection {
-                ray: ray.clone(),
-                t,
-                colour: self.colour,
-            })
+            Some((t, self))
         } else {
             None
         }
@@ -91,10 +85,14 @@ impl Geometry for Plane {
     fn normal(&self, _pos: Vec3) -> Vec3 {
         self.normal
     }
+
+    fn colour(&self) -> Colour {
+        self.colour
+    }
 }
 
 impl Geometry for Sphere {
-    fn hit(&self, ray: &Ray) -> Option<Intersection> {
+    fn hit(&self, ray: &Ray) -> Option<(f64, &dyn Geometry)> {
         let offset = ray.origin - self.centre;
 
         // quadratic equation for "ax^2 + bx + c = 0"
@@ -109,20 +107,12 @@ impl Geometry for Sphere {
 
             let t = (-b - e) / denominator;
             if t > EPSILON {
-                return Some(Intersection {
-                    ray: ray.clone(),
-                    t,
-                    colour: self.colour,
-                });
+                return Some((t, self));
             }
 
             let t = (-b + e) / denominator;
             if t > EPSILON {
-                return Some(Intersection {
-                    ray: ray.clone(),
-                    t,
-                    colour: self.colour,
-                });
+                return Some((t, self));
             }
         }
 
@@ -132,11 +122,15 @@ impl Geometry for Sphere {
     fn normal(&self, pos: Vec3) -> Vec3 {
         (pos - self.centre).normalise()
     }
+
+    fn colour(&self) -> Colour {
+        self.colour
+    }
 }
 
 impl Geometry for Cuboid {
     /// Calculates the intersection point using slab intersection.
-    fn hit(&self, ray: &Ray) -> Option<Intersection> {
+    fn hit(&self, ray: &Ray) -> Option<(f64, &dyn Geometry)> {
         // TODO: include this in the ray itself?
         let invdir = 1.0 / ray.direction;
 
@@ -159,11 +153,7 @@ impl Geometry for Cuboid {
 
         if t_min < t_max {
             let t = if t_min < 0.0 { t_max } else { t_min };
-            Some(Intersection {
-                ray: ray.clone(),
-                t,
-                colour: self.colour,
-            })
+            Some((t, self))
         } else {
             None
         }
@@ -181,6 +171,10 @@ impl Geometry for Cuboid {
             z: (offset.z / divisor.z.abs() * bias).trunc(),
         }
         .normalise()
+    }
+
+    fn colour(&self) -> Colour {
+        self.colour
     }
 }
 
@@ -202,7 +196,7 @@ mod test {
 
         let result = plane.hit(&ray);
         assert!(result.is_some());
-        assert_eq!(result.unwrap().t, 100.0);
+        assert_eq!(result.unwrap().0, 100.0);
     }
 
     #[test]
@@ -219,6 +213,6 @@ mod test {
 
         let result = sphere.hit(&ray);
         assert!(result.is_some());
-        assert_eq!(result.unwrap().t, 50.0);
+        assert_eq!(result.unwrap().0, 50.0);
     }
 }

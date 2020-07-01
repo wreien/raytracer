@@ -1,8 +1,8 @@
 //! The world to render.
 
-use crate::geometry::{Geometry, Intersection};
+use crate::geometry::Geometry;
 use crate::sampler;
-use crate::utility::{Colour, Ray};
+use crate::utility::{Colour, Ray, Vec3};
 
 /// General information about the view.
 ///
@@ -38,6 +38,15 @@ impl ViewPlane {
     }
 }
 
+pub struct Intersection {
+    pub ray: Ray,
+    pub hit_point: Vec3,
+    pub normal: Vec3,
+    pub depth: i32,
+    // TODO material
+    pub colour: Colour,
+}
+
 /// The world itself.
 #[derive(Debug)]
 pub struct World {
@@ -62,9 +71,22 @@ impl World {
 
     /// Returns the intersection for the first object hit by the given ray.
     pub fn hit_objects(&self, ray: Ray) -> Option<Intersection> {
-        self.objects
+        let nearest = self.objects
             .iter()
             .filter_map(|obj| obj.hit(&ray))
-            .min_by(|a, b| a.t.partial_cmp(&b.t).expect("distance is NaN"))
+            .min_by(|a, b| a.0.partial_cmp(&b.0).expect("distance is NaN"));
+
+        if let Some((t, g)) = nearest {
+            let hit_point = ray.origin + t * ray.direction;
+            Some(Intersection {
+                ray,
+                hit_point,
+                normal: g.normal(hit_point),
+                colour: g.colour(),
+                depth: 0,
+            })
+        } else {
+            None
+        }
     }
 }
