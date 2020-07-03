@@ -1,6 +1,8 @@
 //! The world to render.
 
 use crate::geometry::Geometry;
+use crate::light::Light;
+use crate::material::Material;
 use crate::sampler;
 use crate::utility::{Colour, Ray, Vec3};
 
@@ -38,40 +40,30 @@ impl ViewPlane {
     }
 }
 
-pub struct Intersection {
+pub struct Intersection<'m, 'w> {
     pub ray: Ray,
     pub hit_point: Vec3,
     pub normal: Vec3,
     pub depth: i32,
-    // TODO material
-    pub colour: Colour,
+    pub material: &'m dyn Material,
+    pub world: &'w World,
 }
 
 /// The world itself.
 #[derive(Debug)]
 pub struct World {
     pub background: Colour,
-    pub objects: Vec<Box<dyn Geometry>>,
     pub view: ViewPlane,
+    pub objects: Vec<Box<dyn Geometry>>,
+    pub ambient: Box<dyn Light>,
+    pub lights: Vec<Box<dyn Light>>,
 }
 
 impl World {
-    /// Create the world.
-    pub fn new(
-        objects: Vec<Box<dyn Geometry>>,
-        view: ViewPlane,
-        background: Colour,
-    ) -> Self {
-        Self {
-            background,
-            objects,
-            view,
-        }
-    }
-
     /// Returns the intersection for the first object hit by the given ray.
     pub fn hit_objects(&self, ray: Ray) -> Option<Intersection> {
-        let nearest = self.objects
+        let nearest = self
+            .objects
             .iter()
             .filter_map(|obj| obj.hit(&ray))
             .min_by(|a, b| a.0.partial_cmp(&b.0).expect("distance is NaN"));
@@ -81,9 +73,10 @@ impl World {
             Some(Intersection {
                 ray,
                 hit_point,
-                normal: g.normal(hit_point),
-                colour: g.colour(),
                 depth: 0,
+                normal: g.normal(hit_point),
+                material: g.material(),
+                world: self,
             })
         } else {
             None

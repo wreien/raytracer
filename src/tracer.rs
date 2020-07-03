@@ -32,12 +32,12 @@ impl Tracer for SimpleTracer {
 /// Uses [`world::World::hit_objects`] to find the closest object in the world.
 ///
 /// [`world::World::hit_objects`]: crate::world::World::hit_objects()
-pub struct MultipleObjectTracer {}
+pub struct RayCaster {}
 
-impl Tracer for MultipleObjectTracer {
+impl Tracer for RayCaster {
     fn trace_ray(&self, world: &World, ray: Ray) -> Colour {
-        if let Some(intersection) = world.hit_objects(ray) {
-            intersection.colour
+        if let Some(hit) = world.hit_objects(ray) {
+            hit.material.shade(&hit)
         } else {
             world.background
         }

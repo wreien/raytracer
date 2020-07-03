@@ -1,7 +1,7 @@
 //! Various helper utilities used in the raytracer
 
 use image::Rgb;
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Neg, Sub};
 
 /// A three-dimensional vector.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -84,6 +84,13 @@ impl Div<Vec3> for f64 {
     }
 }
 
+impl Neg for Vec3 {
+    type Output = Vec3;
+    fn neg(self) -> Self::Output {
+        Self::Output::new(-self.x, -self.y, -self.z)
+    }
+}
+
 /// A two-dimensional vector.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec2 {
@@ -152,6 +159,13 @@ impl Div<Vec2> for f64 {
     type Output = Vec2;
     fn div(self, rhs: Vec2) -> Self::Output {
         Self::Output::new(self / rhs.x, self / rhs.y)
+    }
+}
+
+impl Neg for Vec2 {
+    type Output = Vec2;
+    fn neg(self) -> Self::Output {
+        Self::Output::new(-self.x, -self.y)
     }
 }
 

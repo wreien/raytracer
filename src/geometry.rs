@@ -1,6 +1,7 @@
 //! Different kinds of objects in the world.
 
-use crate::utility::{Colour, Ray, Vec3};
+use crate::material::Material;
+use crate::utility::{Ray, Vec3};
 use std::fmt;
 
 /// Used to ignore rounding errors, and prevent contact with camera.
@@ -21,26 +22,24 @@ pub trait Geometry: fmt::Debug {
     /// is largely unlikely to matter.
     fn normal(&self, pos: Vec3) -> Vec3;
 
-    /// Get the colour of the object.
-    ///
-    /// Temporary, until we implement materials.
-    fn colour(&self) -> Colour;
+    /// Get the material associated with the object.
+    fn material(&self) -> &dyn Material;
 }
 
 /// An infinite plane.
 #[derive(Debug)]
-pub struct Plane {
+pub struct Plane<M: Material> {
     pub point: Vec3,
     pub normal: Vec3,
-    pub colour: Colour,
+    pub material: M,
 }
 
 /// A simple sphere.
 #[derive(Debug)]
-pub struct Sphere {
+pub struct Sphere<M: Material> {
     pub centre: Vec3,
     pub radius: f64,
-    pub colour: Colour,
+    pub material: M,
 }
 
 /// An axis-aligned cuboid.
@@ -49,29 +48,30 @@ pub struct Sphere {
 ///
 /// Add support for being, well, not axis-aligned.
 #[derive(Debug)]
-pub struct Cuboid {
+pub struct Cuboid<M: Material> {
     /// Min point.
     pub min: Vec3,
     /// Max point.
     pub max: Vec3,
-    pub colour: Colour,
+    /// Material to use for shading
+    pub material: M,
 }
 
-impl Cuboid {
-    pub fn new(min: Vec3, max: Vec3, colour: Colour) -> Self {
-        Self { min, max, colour }
+impl<M: Material> Cuboid<M> {
+    pub fn new(min: Vec3, max: Vec3, material: M) -> Self {
+        Self { min, max, material }
     }
 
-    pub fn with_size(origin: Vec3, size: Vec3, colour: Colour) -> Self {
+    pub fn with_size(origin: Vec3, size: Vec3, material: M) -> Self {
         Self {
             min: origin,
             max: origin + size,
-            colour,
+            material,
         }
     }
 }
 
-impl Geometry for Plane {
+impl<M: Material> Geometry for Plane<M> {
     fn hit(&self, ray: &Ray) -> Option<(f64, &dyn Geometry)> {
         let offset = self.point - ray.origin;
         let t = offset.dot(self.normal) / ray.direction.dot(self.normal);
@@ -86,12 +86,12 @@ impl Geometry for Plane {
         self.normal
     }
 
-    fn colour(&self) -> Colour {
-        self.colour
+    fn material(&self) -> &dyn Material {
+        &self.material
     }
 }
 
-impl Geometry for Sphere {
+impl<M: Material> Geometry for Sphere<M> {
     fn hit(&self, ray: &Ray) -> Option<(f64, &dyn Geometry)> {
         let offset = ray.origin - self.centre;
 
@@ -123,12 +123,12 @@ impl Geometry for Sphere {
         (pos - self.centre).normalise()
     }
 
-    fn colour(&self) -> Colour {
-        self.colour
+    fn material(&self) -> &dyn Material {
+        &self.material
     }
 }
 
-impl Geometry for Cuboid {
+impl<M: Material> Geometry for Cuboid<M> {
     /// Calculates the intersection point using slab intersection.
     fn hit(&self, ray: &Ray) -> Option<(f64, &dyn Geometry)> {
         // TODO: include this in the ray itself?
@@ -173,46 +173,7 @@ impl Geometry for Cuboid {
         .normalise()
     }
 
-    fn colour(&self) -> Colour {
-        self.colour
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn plane_hit() {
-        let ray = Ray {
-            origin: Vec3::new(0.0, 0.0, 100.0),
-            direction: Vec3::new(0.0, 0.0, -1.0),
-        };
-        let plane = Plane {
-            point: Vec3::new(0.0, 0.0, 0.0),
-            normal: Vec3::new(0.0, 0.0, -1.0),
-            colour: Colour::black(),
-        };
-
-        let result = plane.hit(&ray);
-        assert!(result.is_some());
-        assert_eq!(result.unwrap().0, 100.0);
-    }
-
-    #[test]
-    fn sphere_hit() {
-        let ray = Ray {
-            origin: Vec3::new(0.0, 0.0, 100.0),
-            direction: Vec3::new(0.0, 0.0, -1.0),
-        };
-        let sphere = Sphere {
-            centre: Vec3::new(0.0, 0.0, 0.0),
-            radius: 50.0,
-            colour: Colour::black(),
-        };
-
-        let result = sphere.hit(&ray);
-        assert!(result.is_some());
-        assert_eq!(result.unwrap().0, 50.0);
+    fn material(&self) -> &dyn Material {
+        &self.material
     }
 }

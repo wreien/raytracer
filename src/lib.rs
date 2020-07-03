@@ -1,5 +1,8 @@
+pub mod brdf;
 pub mod camera;
 pub mod geometry;
+pub mod light;
+pub mod material;
 pub mod sampler;
 pub mod tracer;
 pub mod utility;
