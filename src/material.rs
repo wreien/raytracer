@@ -6,7 +6,7 @@
 //! See the currently available [BRDFs](crate::brdf) for reflection functions
 //! used in materials.
 
-use crate::brdf::{Lambertian, BRDF};
+use crate::brdf::{Lambertian, GlossySpecular, BRDF};
 use crate::utility::Colour;
 use crate::world::Intersection;
 
@@ -53,8 +53,44 @@ impl Material for Matte {
             let in_dir = light.direction(hit);
             let angle = hit.normal.dot(in_dir);
             if angle > 0.0 {
-                let base_diffuse = self.diffuse.call(hit, out_dir, in_dir);
+                let base_diffuse = self.diffuse.call(hit, in_dir, out_dir);
                 accum + base_diffuse * light.radiance(hit) * angle
+            } else {
+                accum
+            }
+        })
+    }
+}
+
+/// Phong reflections, suitable for shiny objects like metal.
+#[derive(Debug, Clone)]
+pub struct Phong {
+    ambient: Lambertian,
+    diffuse: Lambertian,
+    specular: GlossySpecular,
+}
+
+impl Phong {
+    pub fn new(ka: f64, kd: f64, ks: f64, shininess: f64, colour: Colour) -> Self {
+        let ambient = Lambertian::new(ka, colour);
+        let diffuse = Lambertian::new(kd, colour);
+        let specular = GlossySpecular::new(ks, shininess, colour);
+        Self { ambient, diffuse, specular }
+    }
+}
+
+impl Material for Phong {
+    fn shade(&self, hit: &Intersection) -> Colour {
+        let out_dir = -hit.ray.direction;
+        let light = self.ambient.rho(hit, out_dir) * hit.world.ambient.radiance(hit);
+
+        hit.world.lights.iter().fold(light, |accum, light| {
+            let in_dir = light.direction(hit);
+            let angle = hit.normal.dot(in_dir);
+            if angle > 0.0 {
+                let base_diffuse = self.diffuse.call(hit, in_dir, out_dir);
+                let base_specular = self.specular.call(hit, in_dir, out_dir);
+                accum + (base_diffuse + base_specular) * light.radiance(hit) * angle
             } else {
                 accum
             }

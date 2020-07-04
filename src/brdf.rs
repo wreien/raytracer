@@ -47,3 +47,39 @@ impl BRDF for Lambertian {
         self.rho
     }
 }
+
+/// Glossy specular reflection.
+///
+/// This is a good approximation for shiny materials, like metal.
+#[derive(Debug, Clone)]
+pub struct GlossySpecular {
+    rho: Colour,
+    exponent: f64,
+}
+
+impl GlossySpecular {
+    pub fn new(reflectance: f64, shininess: f64, colour: Colour) -> Self {
+        Self {
+            rho: reflectance * colour,
+            exponent: shininess,
+        }
+    }
+}
+
+impl BRDF for GlossySpecular {
+    fn call(&self, hit: &Intersection, in_dir: Vec3, out_dir: Vec3) -> Colour {
+        let n_dot_in = hit.normal.dot(in_dir);
+        let r = -in_dir + 2.0 * hit.normal * n_dot_in;
+        let r_dot_out = r.dot(out_dir);
+
+        if r_dot_out > 0.0 {
+            self.rho * r_dot_out.powf(self.exponent)
+        } else {
+            Colour::black()
+        }
+    }
+
+    fn rho(&self, _hit: &Intersection, _out_dir: Vec3) -> Colour {
+        Colour::black()
+    }
+}
