@@ -5,7 +5,7 @@ use raytracer::{
     geometry::{self, Geometry},
     light::{self, Light},
     material::{Matte, Phong},
-    sampler::Default as Sampler,
+    sampler::{self, Default as Sampler},
     tracer::RayCaster,
     utility::{Colour, Vec3},
     world::{ViewPlane, World},
@@ -74,8 +74,8 @@ fn build_scene_2() -> (World, impl Camera) {
 }
 
 fn build_scene() -> (World, impl Camera) {
-    let sampler = Sampler::new(25);
-    let view = ViewPlane::new(800, 600, 0.05, sampler);
+    let sampler = sampler::MultiJittered::new(256);
+    let view = ViewPlane::new(800, 600, 0.05, sampler.clone());
 
     let location = camera::Location {
         eye: Vec3::new(-10.0, 5.0, 50.0),
@@ -83,7 +83,7 @@ fn build_scene() -> (World, impl Camera) {
         up: Vec3::new(0.0, 1.0, 0.0),
     };
     let view_len = 40.0;
-    let camera = camera::Pinhole::new(location, view_len, 1.5);
+    let camera = camera::ThinLens::new(location, view_len, 74.0, 1.0, 1.5, sampler);
 
     let ambient = Box::new(light::Ambient::new(1.0));
     let mut lights: Vec<Box<dyn Light>> = Vec::new();
@@ -106,7 +106,7 @@ fn build_scene() -> (World, impl Camera) {
     objects.push(Box::new(geometry::Sphere {
         centre: Vec3::new(0.0, 4.0, -24.0),
         radius: 4.0,
-        material: Matte::new(0.25, 0.65, Colour::white()),
+        material: Matte::new(0.25, 0.65, Colour::new(0.3, 0.7, 1.0)),
     }));
     objects.push(Box::new(geometry::Sphere {
         centre: Vec3::new(-7.0, 4.0, -51.0),
@@ -124,8 +124,8 @@ fn build_scene() -> (World, impl Camera) {
         material: Matte::new(0.3, 0.5, Colour::new(0.3, 0.3, 0.3)),
     }));
     objects.push(Box::new(geometry::Cuboid {
-        min: Vec3::new(40.0, 0.0, -130.0),
-        max: Vec3::new(10.0, 15.0, -80.0),
+        min: Vec3::new(10.0, 0.0, -130.0),
+        max: Vec3::new(40.0, 15.0, -80.0),
         material: Phong::new(0.25, 0.65, 0.2, 3.0, Colour::white()),
     }));
 

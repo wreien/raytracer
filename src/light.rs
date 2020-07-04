@@ -1,13 +1,14 @@
 //! Emitters and ambient lights.
 
-use crate::utility::{Colour, Vec3};
-use crate::world::Intersection;
+use crate::utility::{Colour, Ray, Vec3};
+use crate::world::{Intersection, World};
 
 use std::fmt::Debug;
 
 pub trait Light: Debug {
     fn direction(&self, hit: &Intersection) -> Vec3;
     fn radiance(&self, hit: &Intersection) -> Colour;
+    fn in_shadow(&self, ray: Ray, world: &World) -> bool;
 }
 
 /// Ambient lighting to give a base diffuse shading.
@@ -38,6 +39,10 @@ impl Light for Ambient {
 
     fn radiance(&self, _hit: &Intersection) -> Colour {
         self.scale * self.colour
+    }
+
+    fn in_shadow(&self, _ray: Ray, _world: &World) -> bool {
+        false
     }
 }
 
@@ -73,5 +78,15 @@ impl Light for PointLight {
     fn radiance(&self, _hit: &Intersection) -> Colour {
         // no distance attenuation, so basically just ambient
         self.scale * self.colour
+    }
+
+    fn in_shadow(&self, ray: Ray, world: &World) -> bool {
+        let offset = self.location - ray.origin;
+        let distance_squared = offset.dot(offset);
+
+        world.objects.iter().any(|obj| match obj.hit(&ray) {
+            Some((t, _)) => t * t < distance_squared,
+            _ => false,
+        })
     }
 }

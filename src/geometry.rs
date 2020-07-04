@@ -151,7 +151,7 @@ impl<M: Material> Geometry for Cuboid<M> {
         let t_min = t_xn.max(t_yn.max(t_zn));
         let t_max = t_xf.min(t_yf.min(t_zf));
 
-        if t_min < t_max {
+        if t_min < t_max && t_max > EPSILON {
             let t = if t_min < 0.0 { t_max } else { t_min };
             Some((t, self))
         } else {
