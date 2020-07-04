@@ -1,7 +1,7 @@
 //! Renderers with different projections and techniques.
 
-use std::fmt::Debug;
 use std::f64::consts;
+use std::fmt::Debug;
 
 use crate::sampler::Generator;
 use crate::tracer::Tracer;
@@ -334,7 +334,8 @@ impl Camera for Fisheye {
 pub struct Spherical {
     /// Ratio of exposure.
     exposure: f64,
-    /// Derives the field-of-view angle on the `(u, w)` plane, i.e. horizontally.
+    /// Derives the field-of-view angle on the `(u, w)` plane, i.e.
+    /// horizontally.
     max_azimuth: f64,
     /// Derives the field-of-view angle on the `(u, v)` plane, i.e. vertically.
     max_polar: f64,
@@ -347,9 +348,9 @@ pub struct Spherical {
 impl Spherical {
     /// Create a new fish-eye camera.
     ///
-    /// `azimuth` and `polar` specify the field of view in the horizontal and vertical
-    /// directions, respectively. They are specified in degrees for this builder
-    /// function.
+    /// `azimuth` and `polar` specify the field of view in the horizontal and
+    /// vertical directions, respectively. They are specified in degrees for
+    /// this builder function.
     pub fn new(location: Location, azimuth: f64, polar: f64) -> Self {
         let max_azimuth = azimuth.to_radians();
         let max_polar = polar.to_radians();

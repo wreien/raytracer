@@ -16,17 +16,17 @@ pub trait Light: Debug {
 /// be.
 #[derive(Debug)]
 pub struct Ambient {
-    pub ls: f64,
+    pub scale: f64,
     pub colour: Colour,
 }
 
 impl Ambient {
-    pub fn new(ls: f64) -> Self {
-        Self::with_colour(ls, Colour::white())
+    pub fn new(scale: f64) -> Self {
+        Self::with_colour(scale, Colour::white())
     }
 
-    pub fn with_colour(ls: f64, colour: Colour) -> Self {
-        Self { ls, colour }
+    pub fn with_colour(scale: f64, colour: Colour) -> Self {
+        Self { scale, colour }
     }
 }
 
@@ -37,7 +37,7 @@ impl Light for Ambient {
     }
 
     fn radiance(&self, _hit: &Intersection) -> Colour {
-        self.ls * self.colour
+        self.scale * self.colour
     }
 }
 
@@ -46,19 +46,19 @@ impl Light for Ambient {
 /// This implementation has no distance attenuation.
 #[derive(Debug)]
 pub struct PointLight {
-    pub ls: f64,
+    pub scale: f64,
     pub colour: Colour,
     pub location: Vec3,
 }
 
 impl PointLight {
-    pub fn new(ls: f64, location: Vec3) -> Self {
-        Self::with_colour(ls, location, Colour::white())
+    pub fn new(scale: f64, location: Vec3) -> Self {
+        Self::with_colour(scale, location, Colour::white())
     }
 
-    pub fn with_colour(ls: f64, location: Vec3, colour: Colour) -> Self {
+    pub fn with_colour(scale: f64, location: Vec3, colour: Colour) -> Self {
         Self {
-            ls,
+            scale,
             location,
             colour,
         }
@@ -72,6 +72,6 @@ impl Light for PointLight {
 
     fn radiance(&self, _hit: &Intersection) -> Colour {
         // no distance attenuation, so basically just ambient
-        self.ls * self.colour
+        self.scale * self.colour
     }
 }

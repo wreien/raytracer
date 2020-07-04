@@ -296,6 +296,8 @@ impl Div<Colour> for f64 {
 
 impl From<Colour> for Rgb<u8> {
     fn from(c: Colour) -> Rgb<u8> {
+        let max = c.r.max(c.g.max(c.b));
+        let c = if max > 1.0 { c / max } else { c };
         Rgb([
             (c.r * 255.0).min(255.0).max(0.0) as u8,
             (c.g * 255.0).min(255.0).max(0.0) as u8,
